@@ -121,14 +121,14 @@ struct RobotImpl
       {
         return;
       }
-      robots_ = mc_rbdyn::loadRobot(*rm);
+      robots_->load(*rm, rm->name);
       auto loadMeshCallback = [&](std::vector<std::function<void()>> & draws, Collection & collection, size_t bIdx,
                                   const rbd::parsers::Visual & visual) {
         const auto & meshInfo = boost::get<rbd::parsers::Geometry::Mesh>(visual.geometry.data);
         auto path = convertURI(*rm, meshInfo.filename);
         auto mesh = std::make_shared<Mesh>(collection, path.string(), robot().mb().body(bIdx).name());
         draws.push_back([this, bIdx, visual, mesh]() {
-          const auto & X_0_b = visual.origin * robot().bodyPosW()[bIdx];
+          const auto & X_0_b = visual.origin * robot().bodyPosW(robot().mb().body(bIdx).name());
           mesh->set_position(X_0_b);
         });
       };
@@ -136,7 +136,7 @@ struct RobotImpl
                                  const rbd::parsers::Visual & visual) {
         draws.push_back([this, bIdx, visual]() {
           const auto & box = boost::get<rbd::parsers::Geometry::Box>(visual.geometry.data);
-          const auto & X_0_b = visual.origin * robot().bodyPosW()[bIdx];
+          const auto & X_0_b = visual.origin * robot().bodyPosW(robot().mb().body(bIdx).name());
           // gui().drawCube(translation(X_0_b), convert(X_0_b.rotation()), translation(box.size),
           // color(visual.material));
         });
@@ -146,7 +146,7 @@ struct RobotImpl
         draws.push_back([this, bIdx, visual]() {
           const auto & cylinder = boost::get<rbd::parsers::Geometry::Cylinder>(visual.geometry.data);
           const auto & start = sva::PTransformd(Eigen::Vector3d{0.0, 0.0, -cylinder.length / 2}) * visual.origin
-                               * robot().bodyPosW()[bIdx];
+                               * robot().bodyPosW(robot().mb().body(bIdx).name());
           const auto & end = sva::PTransformd(Eigen::Vector3d{0.0, 0.0, cylinder.length}) * start;
           // gui().drawArrow(translation(start), translation(end), 2 * cylinder.radius, 0.0f, 0.0f,
           //                color(visual.material));
@@ -156,7 +156,7 @@ struct RobotImpl
                                     const rbd::parsers::Visual & visual) {
         draws.push_back([this, bIdx, visual]() {
           const auto & sphere = boost::get<rbd::parsers::Geometry::Sphere>(visual.geometry.data);
-          const auto & X_0_b = visual.origin * robot().bodyPosW()[bIdx];
+          const auto & X_0_b = visual.origin * robot().bodyPosW(robot().mb().body(bIdx).name());
           // gui().drawSphere(translation(X_0_b), static_cast<float>(sphere.radius), color(visual.material));
         });
       };
@@ -185,7 +185,7 @@ struct RobotImpl
         }
       };
       auto loadCallbacks = [&](std::vector<std::function<void()>> & draws, Collection & collection,
-                               const std::map<std::string, std::vector<rbd::parsers::Visual>> & visuals) {
+                               const mc_rbdyn::VisualMap & visuals) {
         draws.clear();
         const auto & bodies = robot().mb().bodies();
         for(size_t i = 0; i < bodies.size(); ++i)
@@ -202,7 +202,7 @@ struct RobotImpl
       loadCallbacks(drawCollision_, collectionCollision_, robot().module()._collision);
     }
     robot().posW(posW);
-    robot().mbc().q = q;
+    robot().q()->set(rbd::paramToVector(robot().mb(), q));
   }
 
   void draw2D()
