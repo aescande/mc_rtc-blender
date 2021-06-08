@@ -121,6 +121,7 @@ struct RobotImpl
       {
         return;
       }
+      robots_ = std::make_shared<mc_rbdyn::Robots>();
       robots_->load(*rm, rm->name);
       auto loadMeshCallback = [&](std::vector<std::function<void()>> & draws, Collection & collection, size_t bIdx,
                                   const rbd::parsers::Visual & visual) {
@@ -201,8 +202,8 @@ struct RobotImpl
       loadCallbacks(drawVisual_, collectionVisual_, robot().module()._visual);
       loadCallbacks(drawCollision_, collectionCollision_, robot().module()._collision);
     }
-    robot().posW(posW);
     robot().q()->set(rbd::paramToVector(robot().mb(), q));
+    robot().posW(posW);
   }
 
   void draw2D()
